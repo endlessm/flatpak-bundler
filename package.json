@@ -1,0 +1,19 @@
+{
+  "name": "flatpak-bundler",
+  "version": "0.0.0",
+  "description": "A small utility for packing files in a flatpak.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattdangerw/flatpak-bundler.git"
+  },
+  "keywords": [
+    "flatpak"
+  ],
+  "author": "Matt Watson <mattdangerw@gmail.com>",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/mattdangerw/flatpak-bundler/issues"
+  },
+  "homepage": "https://github.com/mattdangerw/flatpak-bundler#readme"
+}
