@@ -21,6 +21,7 @@ function getOptionsWithDefaults (options) {
         sdk: 'org.freedesktop.Sdk',
         runtime: 'org.freedesktop.Platform',
         finishArgs: [],
+        symlinks: [],
     });
 }
 
@@ -65,6 +66,20 @@ function copyInFiles (options) {
         });
     });
     return promise.all(copies).then(function () {
+        return options;
+    });
+}
+
+function createSymlinks (options) {
+    var links = _.map(options.symlinks, function (item) {
+        var target = path.join('/app', item[0]);
+        var linkpath = path.join(options.buildDir, 'files', item[1]);
+        var dir = path.dirname(linkpath);
+        return fs.mkdirsAsync(dir).then(function () {
+            fs.symlinkAsync(target, linkpath);
+        });
+    });
+    return promise.all(links).then(function () {
         return options;
     });
 }
@@ -126,6 +141,7 @@ exports.bundle = function (options, callback) {
     ensureDirectories(options)
         .then(flatpakBuildInit)
         .then(copyInFiles)
+        .then(createSymlinks)
         .then(flatpakBuildFinish)
         .then(flatpakBuildExport)
         .then(flatpakBuildBundle)
