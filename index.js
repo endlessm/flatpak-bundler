@@ -5,11 +5,24 @@ var ini = require('ini');
 var path = require('path');
 var util = require('util');
 
+var pkg = require('./package.json');
+var logger = require('debug')(pkg.name);
+
 var promise = require('bluebird');
 var fs = promise.promisifyAll(require('fs-extra'));
 var recursiveReaddir = promise.promisify(require('recursive-readdir'));
-var exec = promise.promisify(require('child_process').exec);
+var exec = promise.promisify(require('child_process').exec, { multiArgs: true });
 var tmpdir = promise.promisify(require('tmp').dir);
+
+function execAndLog (command) {
+    logger(command);
+    return exec(command).then(function (output) {
+        if (output[0])
+            logger('stdout ->\n' + output[0]);
+        if (output[1])
+            logger('stderr ->\n' + output[1]);
+    });
+}
 
 function addCommandLineOption (args, name, value) {
     if (!value)
@@ -42,6 +55,7 @@ function ensureDirectories (options) {
             options.repoDir = dir;
         }));
     return promise.all(dirs).then(function () {
+        logger('Using arguments ->\n' + JSON.stringify(options, null, '  '));
         return options;
     });
 }
@@ -54,7 +68,7 @@ function flatpakBuildInit (options) {
     args.push(options.sdk);
     args.push(options.runtime);
     args.push(options.runtimeVersion);
-    return exec(args.join(' ')).then(function () {
+    return execAndLog(args.join(' ')).then(function () {
         return options;
     });
 }
@@ -64,6 +78,7 @@ function copyInFiles (options) {
         var source = item[0];
         var dest = path.join(options.buildDir, 'files', item[1]);
         var destDir = dest.substring(0, dest.lastIndexOf(path.sep));
+        logger('Copying ' + source + ' -> ' + dest);
         return fs.mkdirsAsync(destDir).then(function() {
             return fs.copyAsync(source, dest);
         });
@@ -101,6 +116,7 @@ function renameFiles (options) {
         if (desktopPath === newDesktopPath)
             return;
 
+        logger('Renaming desktop file ' + desktopPath + ' -> ' + newDesktopPath);
         return fs.moveAsync(desktopPath, newDesktopPath).then(function () {
             return newDesktopPath;
         });
@@ -113,36 +129,39 @@ function renameFiles (options) {
             var data = ini.parse(contents);
             if (!('Desktop Entry' in data))
                 return;
-            let iconName = data['Desktop Entry']['Icon'];
+            var iconName = data['Desktop Entry']['Icon'];
             if (iconName === options.id)
                 return;
-            data['Desktop Entry']['Icon'] = options.id;
-            return fs.writeFileAsync(desktopPath, ini.stringify(data)).then(function () {
+            contents = contents.replace('Icon='+iconName, 'Icon='+options.id);
+            return fs.writeFileAsync(desktopPath, contents).then(function () {
                 return iconName;
             });
         });
     }
 
-    function linkIcons (iconName) {
+    function renameIcons (iconName) {
         if (!iconName)
             return;
         return recursiveReaddir(iconsDir).then(function (iconPaths) {
+            var moves = [];
             _.map(iconPaths, function (iconPath) {
-                let dir = path.dirname(iconPath);
-                dir = dir.substring(dir.indexOf('share'));
-                let oldname = path.basename(iconPath);
-                let newname = oldname.replace(iconName, options.id);
+                var dir = path.dirname(iconPath);
+                var oldname = path.basename(iconPath);
+                var newname = oldname.replace(iconName, options.id);
                 if (newname === oldname)
                     return;
-                options.links.push([oldname, path.join(dir, newname)]);
+                var newPath = path.join(dir, newname);
+                logger('Renaming icon file ' + iconPath + ' -> ' + newPath);
+                moves.push(fs.moveAsync(iconPath, newPath));
             });
+            return promise.all(moves);
         });
     }
 
     return findDesktopFile()
         .then(renameDesktopFile)
         .then(rewriteDesktopFile)
-        .then(linkIcons)
+        .then(renameIcons)
         .then(function () {
             return options;
         });
@@ -165,9 +184,9 @@ function createSymlinks (options) {
 function flatpakBuildFinish (options) {
     var args = ['flatpak build-finish'];
     addCommandLineOption(args, 'command', options.command);
-    args.concat(options.finishArgs);
+    args = args.concat(options.finishArgs);
     args.push(options.buildDir);
-    return exec(args.join(' ')).then(function () {
+    return execAndLog(args.join(' ')).then(function () {
         return options;
     });
 }
@@ -182,7 +201,7 @@ function flatpakBuildExport (options) {
     args.push(options.repoDir);
     args.push(options.buildDir);
     args.push(options.branch);
-    return exec(args.join(' ')).then(function () {
+    return execAndLog(args.join(' ')).then(function () {
         return options;
     });
 }
@@ -199,9 +218,13 @@ function flatpakBuildBundle (options) {
     args.push(options.bundlePath);
     args.push(options.id);
     args.push(options.branch);
-    return exec(args.join(' ')).then(function () {
-        return options;
-    });
+    return fs.mkdirsAsync(path.dirname(options.bundlePath))
+        .then(function () {
+                return execAndLog(args.join(' '));
+            })
+        .then(function () {
+            return options;
+        });
 }
 
 exports.bundle = function (options, callback) {
