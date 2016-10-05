@@ -1,11 +1,13 @@
 'use strict';
 
 var _ = require('lodash');
+var ini = require('ini');
 var path = require('path');
 var util = require('util');
 
 var promise = require('bluebird');
 var fs = promise.promisifyAll(require('fs-extra'));
+var recursiveReaddir = promise.promisify(require('recursive-readdir'));
 var exec = promise.promisify(require('child_process').exec);
 var tmpdir = promise.promisify(require('tmp').dir);
 
@@ -22,6 +24,7 @@ function getOptionsWithDefaults (options) {
         runtime: 'org.freedesktop.Platform',
         finishArgs: [],
         symlinks: [],
+        renameFiles: true,
     });
 }
 
@@ -68,6 +71,81 @@ function copyInFiles (options) {
     return promise.all(copies).then(function () {
         return options;
     });
+}
+
+function renameFiles (options) {
+    if (!options.renameFiles)
+        return options;
+
+    var applicationsDir = path.join(options.buildDir, 'files', 'share', 'applications');
+    var iconsDir = path.join(options.buildDir, 'files', 'share', 'icons');
+
+    function findDesktopFile () {
+        return fs.readdirAsync(applicationsDir).then(function (desktopPaths) {
+            desktopPaths = desktopPaths.filter(function (desktopPath) {
+                return path.extname(desktopPath) === '.desktop';
+            });
+            if (desktopPaths.length !== 1)
+                return;
+            return path.join(applicationsDir, desktopPaths[0]);
+        }).catch(function (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+        });
+    }
+
+    function renameDesktopFile (desktopPath) {
+        if (!desktopPath)
+            return;
+        var newDesktopPath = path.join(applicationsDir, options.id + '.desktop');
+        if (desktopPath === newDesktopPath)
+            return;
+
+        return fs.moveAsync(desktopPath, newDesktopPath).then(function () {
+            return newDesktopPath;
+        });
+    }
+
+    function rewriteDesktopFile (desktopPath) {
+        if (!desktopPath)
+            return;
+        return fs.readFileAsync(desktopPath, 'utf-8').then(function (contents) {
+            var data = ini.parse(contents);
+            if (!('Desktop Entry' in data))
+                return;
+            let iconName = data['Desktop Entry']['Icon'];
+            if (iconName === options.id)
+                return;
+            data['Desktop Entry']['Icon'] = options.id;
+            return fs.writeFileAsync(desktopPath, ini.stringify(data)).then(function () {
+                return iconName;
+            });
+        });
+    }
+
+    function linkIcons (iconName) {
+        if (!iconName)
+            return;
+        return recursiveReaddir(iconsDir).then(function (iconPaths) {
+            _.map(iconPaths, function (iconPath) {
+                let dir = path.dirname(iconPath);
+                dir = dir.substring(dir.indexOf('share'));
+                let oldname = path.basename(iconPath);
+                let newname = oldname.replace(iconName, options.id);
+                if (newname === oldname)
+                    return;
+                options.links.push([oldname, path.join(dir, newname)]);
+            });
+        });
+    }
+
+    return findDesktopFile()
+        .then(renameDesktopFile)
+        .then(rewriteDesktopFile)
+        .then(linkIcons)
+        .then(function () {
+            return options;
+        });
 }
 
 function createSymlinks (options) {
@@ -141,6 +219,7 @@ exports.bundle = function (options, callback) {
     ensureDirectories(options)
         .then(flatpakBuildInit)
         .then(copyInFiles)
+        .then(renameFiles)
         .then(createSymlinks)
         .then(flatpakBuildFinish)
         .then(flatpakBuildExport)
