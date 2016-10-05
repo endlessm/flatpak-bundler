@@ -1,18 +1,18 @@
 'use strict';
 
-var _ = require('lodash');
-var ini = require('ini');
-var path = require('path');
-var util = require('util');
+const _ = require('lodash');
+const ini = require('ini');
+const path = require('path');
+const util = require('util');
 
-var pkg = require('./package.json');
-var logger = require('debug')(pkg.name);
+const pkg = require('./package.json');
+const logger = require('debug')(pkg.name);
 
-var promise = require('bluebird');
-var fs = promise.promisifyAll(require('fs-extra'));
-var recursiveReaddir = promise.promisify(require('recursive-readdir'));
-var exec = promise.promisify(require('child_process').exec, { multiArgs: true });
-var tmpdir = promise.promisify(require('tmp').dir);
+const promise = require('bluebird');
+const fs = promise.promisifyAll(require('fs-extra'));
+const recursiveReaddir = promise.promisify(require('recursive-readdir'));
+const exec = promise.promisify(require('child_process').exec, { multiArgs: true });
+const tmpdir = promise.promisify(require('tmp').dir);
 
 function execAndLog (command) {
     logger(command);
@@ -42,7 +42,7 @@ function getOptionsWithDefaults (options) {
 }
 
 function ensureDirectories (options) {
-    var dirs = [];
+    let dirs = [];
     if (!options.buildDir) {
         dirs.push(tmpdir().then(function (dir) {
             options.buildDir = dir;
@@ -61,7 +61,7 @@ function ensureDirectories (options) {
 }
 
 function flatpakBuildInit (options) {
-    var args = ['flatpak build-init'];
+    let args = ['flatpak build-init'];
     addCommandLineOption(args, 'arch', options.arch);
     args.push(options.buildDir);
     args.push(options.id);
@@ -74,10 +74,10 @@ function flatpakBuildInit (options) {
 }
 
 function copyInFiles (options) {
-    var copies = _.map(options.files, function (item) {
-        var source = item[0];
-        var dest = path.join(options.buildDir, 'files', item[1]);
-        var destDir = dest.substring(0, dest.lastIndexOf(path.sep));
+    let copies = _.map(options.files, function (item) {
+        let source = item[0];
+        let dest = path.join(options.buildDir, 'files', item[1]);
+        let destDir = dest.substring(0, dest.lastIndexOf(path.sep));
         logger('Copying ' + source + ' -> ' + dest);
         return fs.mkdirsAsync(destDir).then(function() {
             return fs.copyAsync(source, dest);
@@ -92,8 +92,8 @@ function renameFiles (options) {
     if (!options.renameFiles)
         return options;
 
-    var applicationsDir = path.join(options.buildDir, 'files', 'share', 'applications');
-    var iconsDir = path.join(options.buildDir, 'files', 'share', 'icons');
+    let applicationsDir = path.join(options.buildDir, 'files', 'share', 'applications');
+    let iconsDir = path.join(options.buildDir, 'files', 'share', 'icons');
 
     function findDesktopFile () {
         return fs.readdirAsync(applicationsDir).then(function (desktopPaths) {
@@ -112,7 +112,7 @@ function renameFiles (options) {
     function renameDesktopFile (desktopPath) {
         if (!desktopPath)
             return;
-        var newDesktopPath = path.join(applicationsDir, options.id + '.desktop');
+        let newDesktopPath = path.join(applicationsDir, options.id + '.desktop');
         if (desktopPath === newDesktopPath)
             return;
 
@@ -126,10 +126,10 @@ function renameFiles (options) {
         if (!desktopPath)
             return;
         return fs.readFileAsync(desktopPath, 'utf-8').then(function (contents) {
-            var data = ini.parse(contents);
+            let data = ini.parse(contents);
             if (!('Desktop Entry' in data))
                 return;
-            var iconName = data['Desktop Entry']['Icon'];
+            let iconName = data['Desktop Entry']['Icon'];
             if (iconName === options.id)
                 return;
             contents = contents.replace('Icon='+iconName, 'Icon='+options.id);
@@ -143,14 +143,14 @@ function renameFiles (options) {
         if (!iconName)
             return;
         return recursiveReaddir(iconsDir).then(function (iconPaths) {
-            var moves = [];
+            let moves = [];
             _.map(iconPaths, function (iconPath) {
-                var dir = path.dirname(iconPath);
-                var oldname = path.basename(iconPath);
-                var newname = oldname.replace(iconName, options.id);
+                let dir = path.dirname(iconPath);
+                let oldname = path.basename(iconPath);
+                let newname = oldname.replace(iconName, options.id);
                 if (newname === oldname)
                     return;
-                var newPath = path.join(dir, newname);
+                let newPath = path.join(dir, newname);
                 logger('Renaming icon file ' + iconPath + ' -> ' + newPath);
                 moves.push(fs.moveAsync(iconPath, newPath));
             });
@@ -168,10 +168,10 @@ function renameFiles (options) {
 }
 
 function createSymlinks (options) {
-    var links = _.map(options.symlinks, function (item) {
-        var target = path.join('/app', item[0]);
-        var linkpath = path.join(options.buildDir, 'files', item[1]);
-        var dir = path.dirname(linkpath);
+    let links = _.map(options.symlinks, function (item) {
+        let target = path.join('/app', item[0]);
+        let linkpath = path.join(options.buildDir, 'files', item[1]);
+        let dir = path.dirname(linkpath);
         return fs.mkdirsAsync(dir).then(function () {
             fs.symlinkAsync(target, linkpath);
         });
@@ -182,7 +182,7 @@ function createSymlinks (options) {
 }
 
 function flatpakBuildFinish (options) {
-    var args = ['flatpak build-finish'];
+    let args = ['flatpak build-finish'];
     addCommandLineOption(args, 'command', options.command);
     args = args.concat(options.finishArgs);
     args.push(options.buildDir);
@@ -192,7 +192,7 @@ function flatpakBuildFinish (options) {
 }
 
 function flatpakBuildExport (options) {
-    var args = ['flatpak build-export'];
+    let args = ['flatpak build-export'];
     addCommandLineOption(args, 'arch', options.arch);
     addCommandLineOption(args, 'gpg-sign', options.gpgSign);
     addCommandLineOption(args, 'gpg-homedir', options.gpgHomedir);
@@ -210,7 +210,7 @@ function flatpakBuildBundle (options) {
     if (!options.bundlePath)
         return options;
 
-    var args = ['flatpak build-bundle'];
+    let args = ['flatpak build-bundle'];
     addCommandLineOption(args, 'arch', options.arch);
     addCommandLineOption(args, 'gpg-sign', options.gpgSign);
     addCommandLineOption(args, 'gpg-homedir', options.gpgHomedir);
