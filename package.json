@@ -16,6 +16,9 @@
     "url": "https://github.com/mattdangerw/flatpak-bundler/issues"
   },
   "homepage": "https://github.com/mattdangerw/flatpak-bundler#readme",
+  "engines": {
+    "node": ">=4.0.0"
+  },
   "dependencies": {
     "bluebird": "^3.4.6",
     "debug": "^2.2.0",
