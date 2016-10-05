@@ -1,6 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
+const fs = require('fs-extra');
 const ini = require('ini');
 const path = require('path');
 const util = require('util');
@@ -8,11 +9,18 @@ const util = require('util');
 const pkg = require('./package.json');
 const logger = require('debug')(pkg.name);
 
-const promise = require('bluebird');
-const fs = promise.promisifyAll(require('fs-extra'));
-const recursiveReaddir = promise.promisify(require('recursive-readdir'));
-const exec = promise.promisify(require('child_process').exec, { multiArgs: true });
-const tmpdir = promise.promisify(require('tmp').dir);
+const promisify = require("es6-promisify");
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
+const copy = promisify(fs.copy);
+const move = promisify(fs.move);
+const remove = promisify(fs.remove);
+const symlink = promisify(fs.symlink);
+const readdir = promisify(fs.readdir);
+const mkdirs = promisify(fs.mkdirs);
+const recursiveReaddir = promisify(require('recursive-readdir'));
+const exec = promisify(require('child_process').exec, { multiArgs: true });
+const tmpdir = promisify(require('tmp').dir);
 
 function execAndLog (command) {
     logger(command);
@@ -48,13 +56,13 @@ function ensureDirectories (options) {
             options.buildDir = dir;
         }));
     } else {
-        dirs.push(fs.removeAsync(options.buildDir));
+        dirs.push(remove(options.buildDir));
     }
     if (!options.repoDir)
         dirs.push(tmpdir().then(function (dir) {
             options.repoDir = dir;
         }));
-    return promise.all(dirs).then(function () {
+    return Promise.all(dirs).then(function () {
         logger('Using arguments ->\n' + JSON.stringify(options, null, '  '));
         return options;
     });
@@ -79,11 +87,11 @@ function copyInFiles (options) {
         let dest = path.join(options.buildDir, 'files', item[1]);
         let destDir = dest.substring(0, dest.lastIndexOf(path.sep));
         logger('Copying ' + source + ' -> ' + dest);
-        return fs.mkdirsAsync(destDir).then(function() {
-            return fs.copyAsync(source, dest);
+        return mkdirs(destDir).then(function() {
+            return copy(source, dest);
         });
     });
-    return promise.all(copies).then(function () {
+    return Promise.all(copies).then(function () {
         return options;
     });
 }
@@ -96,7 +104,7 @@ function renameFiles (options) {
     let iconsDir = path.join(options.buildDir, 'files', 'share', 'icons');
 
     function findDesktopFile () {
-        return fs.readdirAsync(applicationsDir).then(function (desktopPaths) {
+        return readdir(applicationsDir).then(function (desktopPaths) {
             desktopPaths = desktopPaths.filter(function (desktopPath) {
                 return path.extname(desktopPath) === '.desktop';
             });
@@ -117,7 +125,7 @@ function renameFiles (options) {
             return;
 
         logger('Renaming desktop file ' + desktopPath + ' -> ' + newDesktopPath);
-        return fs.moveAsync(desktopPath, newDesktopPath).then(function () {
+        return move(desktopPath, newDesktopPath).then(function () {
             return newDesktopPath;
         });
     }
@@ -125,7 +133,7 @@ function renameFiles (options) {
     function rewriteDesktopFile (desktopPath) {
         if (!desktopPath)
             return;
-        return fs.readFileAsync(desktopPath, 'utf-8').then(function (contents) {
+        return readFile(desktopPath, 'utf-8').then(function (contents) {
             let data = ini.parse(contents);
             if (!('Desktop Entry' in data))
                 return;
@@ -133,7 +141,7 @@ function renameFiles (options) {
             if (iconName === options.id)
                 return;
             contents = contents.replace('Icon='+iconName, 'Icon='+options.id);
-            return fs.writeFileAsync(desktopPath, contents).then(function () {
+            return writeFile(desktopPath, contents).then(function () {
                 return iconName;
             });
         });
@@ -152,9 +160,9 @@ function renameFiles (options) {
                     return;
                 let newPath = path.join(dir, newname);
                 logger('Renaming icon file ' + iconPath + ' -> ' + newPath);
-                moves.push(fs.moveAsync(iconPath, newPath));
+                moves.push(move(iconPath, newPath));
             });
-            return promise.all(moves);
+            return Promise.all(moves);
         });
     }
 
@@ -172,11 +180,11 @@ function createSymlinks (options) {
         let target = path.join('/app', item[0]);
         let linkpath = path.join(options.buildDir, 'files', item[1]);
         let dir = path.dirname(linkpath);
-        return fs.mkdirsAsync(dir).then(function () {
-            fs.symlinkAsync(target, linkpath);
+        return mkdirs(dir).then(function () {
+            symlink(target, linkpath);
         });
     });
-    return promise.all(links).then(function () {
+    return Promise.all(links).then(function () {
         return options;
     });
 }
@@ -218,7 +226,7 @@ function flatpakBuildBundle (options) {
     args.push(options.bundlePath);
     args.push(options.id);
     args.push(options.branch);
-    return fs.mkdirsAsync(path.dirname(options.bundlePath))
+    return mkdirs(path.dirname(options.bundlePath))
         .then(function () {
                 return execAndLog(args.join(' '));
             })
