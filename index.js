@@ -66,10 +66,7 @@ function ensureDirectories (options) {
       })
     dirs.push(makeDir)
   }
-  return Promise.all(dirs).then(function () {
-    logger('Using arguments ->\n' + JSON.stringify(options, null, '  '))
-    return options
-  })
+  return Promise.all(dirs)
 }
 
 function flatpakBuildInit (options) {
@@ -81,9 +78,6 @@ function flatpakBuildInit (options) {
   args.push(options.runtime)
   args.push(options.runtimeVersion)
   return execAndLog(args.join(' '))
-    .then(function () {
-      return options
-    })
 }
 
 function copyInFiles (options) {
@@ -98,13 +92,10 @@ function copyInFiles (options) {
       })
   })
   return Promise.all(copies)
-    .then(function () {
-      return options
-    })
 }
 
 function renameFiles (options) {
-  if (!options.renameFiles) return options
+  if (!options.renameFiles) return
 
   let applicationsDir = path.join(options.buildDir, 'files', 'share', 'applications')
   let iconsDir = path.join(options.buildDir, 'files', 'share', 'icons')
@@ -174,9 +165,6 @@ function renameFiles (options) {
     .then(renameDesktopFile)
     .then(rewriteDesktopFile)
     .then(renameIcons)
-    .then(function () {
-      return options
-    })
 }
 
 function createSymlinks (options) {
@@ -190,9 +178,6 @@ function createSymlinks (options) {
       })
   })
   return Promise.all(links)
-    .then(function () {
-      return options
-    })
 }
 
 function flatpakBuildFinish (options) {
@@ -201,9 +186,6 @@ function flatpakBuildFinish (options) {
   args = args.concat(options.finishArgs)
   args.push(options.buildDir)
   return execAndLog(args.join(' '))
-    .then(function () {
-      return options
-    })
 }
 
 function flatpakBuildExport (options) {
@@ -217,13 +199,10 @@ function flatpakBuildExport (options) {
   args.push(options.buildDir)
   args.push(options.branch)
   return execAndLog(args.join(' '))
-    .then(function () {
-      return options
-    })
 }
 
 function flatpakBuildBundle (options) {
-  if (!options.bundlePath) return options
+  if (!options.bundlePath) return
 
   let args = ['flatpak build-bundle']
   addCommandLineOption(args, 'arch', options.arch)
@@ -236,9 +215,6 @@ function flatpakBuildBundle (options) {
   return mkdirs(path.dirname(options.bundlePath))
     .then(function () {
       return execAndLog(args.join(' '))
-    })
-    .then(function () {
-      return options
     })
 }
 
@@ -255,14 +231,17 @@ exports.bundle = function (options, callback) {
   options = getOptionsWithDefaults(options)
 
   ensureDirectories(options)
-    .then(flatpakBuildInit)
-    .then(copyInFiles)
-    .then(renameFiles)
-    .then(createSymlinks)
-    .then(flatpakBuildFinish)
-    .then(flatpakBuildExport)
-    .then(flatpakBuildBundle)
     .then(function (options) {
+      logger('Using arguments ->\n' + JSON.stringify(options, null, '  '))
+    })
+    .then(() => flatpakBuildInit(options))
+    .then(() => copyInFiles(options))
+    .then(() => renameFiles(options))
+    .then(() => createSymlinks(options))
+    .then(() => flatpakBuildFinish(options))
+    .then(() => flatpakBuildExport(options))
+    .then(() => flatpakBuildBundle(options))
+    .then(function () {
       callback(null, options)
     }, function (error) {
       callback(error)
