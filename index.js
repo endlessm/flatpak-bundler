@@ -24,10 +24,11 @@ const tmpdir = promisify(require('tmp').dir)
 
 function execAndLog (command) {
   logger(command)
-  return exec(command).then(function (output) {
-    if (output[0]) logger('stdout ->\n' + output[0])
-    if (output[1]) logger('stderr ->\n' + output[1])
-  })
+  return exec(command)
+    .then(function (output) {
+      if (output[0]) logger('stdout ->\n' + output[0])
+      if (output[1]) logger('stderr ->\n' + output[1])
+    })
 }
 
 function addCommandLineOption (args, name, value) {
@@ -50,16 +51,20 @@ function getOptionsWithDefaults (options) {
 function ensureDirectories (options) {
   let dirs = []
   if (!options.buildDir) {
-    dirs.push(tmpdir().then(function (dir) {
-      options.buildDir = dir
-    }))
+    let makeDir = tmpdir()
+      .then(function (dir) {
+        options.buildDir = dir
+      })
+    dirs.push(makeDir)
   } else {
     dirs.push(remove(options.buildDir))
   }
   if (!options.repoDir) {
-    dirs.push(tmpdir().then(function (dir) {
-      options.repoDir = dir
-    }))
+    let makeDir = tmpdir()
+      .then(function (dir) {
+        options.repoDir = dir
+      })
+    dirs.push(makeDir)
   }
   return Promise.all(dirs).then(function () {
     logger('Using arguments ->\n' + JSON.stringify(options, null, '  '))
@@ -75,9 +80,10 @@ function flatpakBuildInit (options) {
   args.push(options.sdk)
   args.push(options.runtime)
   args.push(options.runtimeVersion)
-  return execAndLog(args.join(' ')).then(function () {
-    return options
-  })
+  return execAndLog(args.join(' '))
+    .then(function () {
+      return options
+    })
 }
 
 function copyInFiles (options) {
@@ -86,13 +92,15 @@ function copyInFiles (options) {
     let dest = path.join(options.buildDir, 'files', item[1])
     let destDir = dest.substring(0, dest.lastIndexOf(path.sep))
     logger('Copying ' + source + ' -> ' + dest)
-    return mkdirs(destDir).then(function () {
-      return copy(source, dest)
+    return mkdirs(destDir)
+      .then(function () {
+        return copy(source, dest)
+      })
+  })
+  return Promise.all(copies)
+    .then(function () {
+      return options
     })
-  })
-  return Promise.all(copies).then(function () {
-    return options
-  })
 }
 
 function renameFiles (options) {
@@ -102,16 +110,17 @@ function renameFiles (options) {
   let iconsDir = path.join(options.buildDir, 'files', 'share', 'icons')
 
   function findDesktopFile () {
-    return readdir(applicationsDir).then(function (desktopPaths) {
-      desktopPaths = desktopPaths.filter(function (desktopPath) {
-        return path.extname(desktopPath) === '.desktop'
-      })
-      if (desktopPaths.length !== 1) return
+    return readdir(applicationsDir)
+      .then(function (desktopPaths) {
+        desktopPaths = desktopPaths.filter(function (desktopPath) {
+          return path.extname(desktopPath) === '.desktop'
+        })
+        if (desktopPaths.length !== 1) return
 
-      return path.join(applicationsDir, desktopPaths[0])
-    }).catch(function (error) {
-      if (error.code !== 'ENOENT') throw error
-    })
+        return path.join(applicationsDir, desktopPaths[0])
+      }).catch(function (error) {
+        if (error.code !== 'ENOENT') throw error
+      })
   }
 
   function renameDesktopFile (desktopPath) {
@@ -120,42 +129,45 @@ function renameFiles (options) {
     if (desktopPath === newDesktopPath) return
 
     logger('Renaming desktop file ' + desktopPath + ' -> ' + newDesktopPath)
-    return move(desktopPath, newDesktopPath).then(function () {
-      return newDesktopPath
-    })
+    return move(desktopPath, newDesktopPath)
+      .then(function () {
+        return newDesktopPath
+      })
   }
 
   function rewriteDesktopFile (desktopPath) {
     if (!desktopPath) return
 
-    return readFile(desktopPath, 'utf-8').then(function (contents) {
-      let data = ini.parse(contents)
-      if (!('Desktop Entry' in data)) return
-      let iconName = data['Desktop Entry']['Icon']
-      if (iconName === options.id) return
-      contents = contents.replace('Icon=' + iconName, 'Icon=' + options.id)
-      return writeFile(desktopPath, contents).then(function () {
-        return iconName
+    return readFile(desktopPath, 'utf-8')
+      .then(function (contents) {
+        let data = ini.parse(contents)
+        if (!('Desktop Entry' in data)) return
+        let iconName = data['Desktop Entry']['Icon']
+        if (iconName === options.id) return
+        contents = contents.replace('Icon=' + iconName, 'Icon=' + options.id)
+        return writeFile(desktopPath, contents).then(function () {
+          return iconName
+        })
       })
-    })
   }
 
   function renameIcons (iconName) {
     if (!iconName) return
 
-    return recursiveReaddir(iconsDir).then(function (iconPaths) {
-      let moves = []
-      _.map(iconPaths, function (iconPath) {
-        let dir = path.dirname(iconPath)
-        let oldname = path.basename(iconPath)
-        let newname = oldname.replace(iconName, options.id)
-        if (newname === oldname) return
-        let newPath = path.join(dir, newname)
-        logger('Renaming icon file ' + iconPath + ' -> ' + newPath)
-        moves.push(move(iconPath, newPath))
+    return recursiveReaddir(iconsDir)
+      .then(function (iconPaths) {
+        let moves = []
+        _.map(iconPaths, function (iconPath) {
+          let dir = path.dirname(iconPath)
+          let oldname = path.basename(iconPath)
+          let newname = oldname.replace(iconName, options.id)
+          if (newname === oldname) return
+          let newPath = path.join(dir, newname)
+          logger('Renaming icon file ' + iconPath + ' -> ' + newPath)
+          moves.push(move(iconPath, newPath))
+        })
+        return Promise.all(moves)
       })
-      return Promise.all(moves)
-    })
   }
 
   return findDesktopFile()
@@ -172,13 +184,15 @@ function createSymlinks (options) {
     let target = path.join('/app', item[0])
     let linkpath = path.join(options.buildDir, 'files', item[1])
     let dir = path.dirname(linkpath)
-    return mkdirs(dir).then(function () {
-      symlink(target, linkpath)
+    return mkdirs(dir)
+      .then(function () {
+        symlink(target, linkpath)
+      })
+  })
+  return Promise.all(links)
+    .then(function () {
+      return options
     })
-  })
-  return Promise.all(links).then(function () {
-    return options
-  })
 }
 
 function flatpakBuildFinish (options) {
@@ -186,9 +200,10 @@ function flatpakBuildFinish (options) {
   addCommandLineOption(args, 'command', options.command)
   args = args.concat(options.finishArgs)
   args.push(options.buildDir)
-  return execAndLog(args.join(' ')).then(function () {
-    return options
-  })
+  return execAndLog(args.join(' '))
+    .then(function () {
+      return options
+    })
 }
 
 function flatpakBuildExport (options) {
@@ -201,9 +216,10 @@ function flatpakBuildExport (options) {
   args.push(options.repoDir)
   args.push(options.buildDir)
   args.push(options.branch)
-  return execAndLog(args.join(' ')).then(function () {
-    return options
-  })
+  return execAndLog(args.join(' '))
+    .then(function () {
+      return options
+    })
 }
 
 function flatpakBuildBundle (options) {
