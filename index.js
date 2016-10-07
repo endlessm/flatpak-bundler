@@ -12,6 +12,8 @@ const logger = require('debug')(pkg.name)
 const promisify = require('es6-promisify')
 const writeFile = promisify(fs.writeFile)
 const mkdirs = promisify(fs.mkdirs)
+const copy = promisify(fs.copy)
+const symlink = promisify(fs.symlink)
 const exec = promisify(require('child_process').exec, { multiArgs: true })
 const tmpdir = promisify(require('tmp').dir)
 
@@ -79,47 +81,6 @@ function getManifestWithDefaults (manifest) {
   return _.defaults({}, manifest, defaults)
 }
 
-function addManfiestFilesAndLinks (options, manifest) {
-  let commands = []
-  for (let sourceDest of manifest['files']) {
-    let source = path.resolve(sourceDest[0])
-    let dest = path.join('/app', sourceDest[1])
-    let dir = dest
-    if (!_.endsWith(dir, path.sep)) dir = path.dirname(dir)
-    commands.push(quote(['mkdir', '-p', dir]))
-    commands.push(quote(['cp', '-r', source, dest]))
-  }
-  for (let targetDest of manifest['symlinks']) {
-    let target = path.join('/app', targetDest[0])
-    let dest = path.join('/app', targetDest[1])
-    let dir = path.dirname(dest)
-    commands.push(quote(['mkdir', '-p', dir]))
-    commands.push(quote(['ln', '-s', target, dest]))
-  }
-  // This is kinda gross, but at the moment flatpak won't accept a source that
-  // includes no make or cmake files. Include a minimal Makefile
-  commands.push('echo "all:\ninstall:\n" > Makefile')
-  let module = {
-    'name': [pkg.name, 'files'].join('-'),
-    'no-autogen': true,
-    'build-options': {
-      'build-args': [
-        '--filesystem=' + options['working-dir'],
-        '--filesystem=host'
-      ]
-    },
-    'sources': [
-      {
-        'type': 'shell',
-        'commands': commands
-      }
-    ]
-  }
-  manifest['modules'].push(module)
-  delete manifest['files']
-  delete manifest['symlinks']
-}
-
 function ensureWorkingDir (options) {
   if (!options['working-dir']) {
     return tmpdir({ dir: '/var/tmp', unsafeCleanup: true })
@@ -135,7 +96,38 @@ function writeJsonFile (options, manifest) {
   return writeFile(options['manifest-path'], JSON.stringify(manifest, null, '  '))
 }
 
-function flatpakBuilder (options) {
+function copyFiles (options, manifest) {
+  let copies = manifest['files'].map(function (sourceDest) {
+    let source = path.resolve(sourceDest[0])
+    let dest = path.join(options['build-dir'], 'files', sourceDest[1])
+    let dir = dest
+    if (!_.endsWith(dir, path.sep)) dir = path.dirname(dir)
+
+    logger('Copying ' + source + ' to ' + dest)
+    return mkdirs(dir)
+      .then(function () {
+        return copy(source, dest)
+      })
+  })
+  return Promise.all(copies)
+}
+
+function createSymlinks (options, manifest) {
+  let links = manifest['symlinks'].map(function (targetDest) {
+    let target = path.join('/app', targetDest[0])
+    let dest = path.join(options['build-dir'], 'files', targetDest[1])
+    let dir = path.dirname(dest)
+
+    logger('Symlinking ' + target + ' at ' + dest)
+    return mkdirs(dir)
+      .then(function () {
+        symlink(target, dest)
+      })
+  })
+  return Promise.all(links)
+}
+
+function flatpakBuilder (options, finish) {
   let args = ['flatpak-builder']
   addCommandLineOption(args, 'arch', options['arch'])
   addCommandLineOption(args, 'gpg-sign', options['gpg-sign'])
@@ -144,6 +136,11 @@ function flatpakBuilder (options) {
   addCommandLineOption(args, 'body', options['body'])
   addCommandLineOption(args, 'repo', options['repo-dir'])
   addCommandLineOption(args, 'force-clean', true)
+  if (!finish) {
+    addCommandLineOption(args, 'build-only', true)
+  } else {
+    addCommandLineOption(args, 'finish-only', true)
+  }
   args.concat(options['extra-flatpak-builder-args'])
 
   args.push(options['build-dir'])
@@ -180,13 +177,15 @@ exports.bundle = function (manifest, options, callback) {
     .then(() => {
       options = getOptionsWithDefaults(options)
       manifest = getManifestWithDefaults(manifest)
-      addManfiestFilesAndLinks(options, manifest)
 
       logger('Using manifest ->\n' + JSON.stringify(manifest, null, '  '))
       logger('Using options ->\n' + JSON.stringify(options, null, '  '))
     })
     .then(() => writeJsonFile(options, manifest))
-    .then(() => flatpakBuilder(options))
+    .then(() => flatpakBuilder(options, false))
+    .then(() => copyFiles(options, manifest))
+    .then(() => createSymlinks(options, manifest))
+    .then(() => flatpakBuilder(options, true))
     .then(() => flatpakBuildBundle(options, manifest))
     .then(function () {
       callback(null, options, manifest)
