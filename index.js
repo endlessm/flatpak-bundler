@@ -146,6 +146,7 @@ function flatpakBuilder (options, finish) {
   addCommandLineOption(args, 'body', options['body'])
   addCommandLineOption(args, 'repo', options['repo-dir'])
   addCommandLineOption(args, 'force-clean', true)
+  addCommandLineOption(args, 'allow-missing-runtimes', true)
   if (!finish) {
     addCommandLineOption(args, 'build-only', true)
   } else {
