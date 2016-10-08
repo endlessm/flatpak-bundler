@@ -1,9 +1,9 @@
 'use strict'
 
 const _ = require('lodash')
+const childProcess = require('child_process')
 const fs = require('fs-extra')
 const path = require('path')
-const quote = require('shell-quote').quote
 const util = require('util')
 
 const pkg = require('./package.json')
@@ -14,7 +14,6 @@ const writeFile = promisify(fs.writeFile)
 const mkdirs = promisify(fs.mkdirs)
 const copy = promisify(fs.copy)
 const symlink = promisify(fs.symlink)
-const exec = promisify(require('child_process').exec, { multiArgs: true })
 const tmpdir = promisify(require('tmp').dir)
 
 function kebabify (object) {
@@ -28,14 +27,26 @@ function kebabify (object) {
   })
 }
 
-function execAndLog (options, args) {
-  let command = quote(args)
-  return exec(command, { cwd: options['working-dir'] })
-    .then(function (output) {
-      logger(command)
-      if (output[0]) logger('stdout ->\n' + output[0])
-      if (output[1]) logger('stderr ->\n' + output[1])
+function spawnWithLogging (options, command, args) {
+  return new Promise(function (resolve, reject) {
+    logger(`$ ${command} ${args.join(' ')}`)
+    let child = childProcess.spawn(command, args, { cwd: options['working-dir'] })
+    child.stdout.on('data', (data) => {
+      logger(`1> ${data}`)
     })
+    child.stderr.on('data', (data) => {
+      logger(`2> ${data}`)
+    })
+    child.on('error', (error) => {
+      reject(error)
+    })
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`${command} failed with status code ${code}`))
+      }
+      resolve()
+    })
+  })
 }
 
 function addCommandLineOption (args, name, value) {
@@ -128,7 +139,7 @@ function createSymlinks (options, manifest) {
 }
 
 function flatpakBuilder (options, finish) {
-  let args = ['flatpak-builder']
+  let args = []
   addCommandLineOption(args, 'arch', options['arch'])
   addCommandLineOption(args, 'gpg-sign', options['gpg-sign'])
   addCommandLineOption(args, 'gpg-homedir', options['gpg-homedir'])
@@ -145,13 +156,13 @@ function flatpakBuilder (options, finish) {
 
   args.push(options['build-dir'])
   args.push(options['manifest-path'])
-  return execAndLog(options, args)
+  return spawnWithLogging(options, 'flatpak-builder', args)
 }
 
 function flatpakBuildBundle (options, manifest) {
   if (!options['bundle-path']) return
 
-  let args = ['flatpak', 'build-bundle']
+  let args = ['build-bundle']
   addCommandLineOption(args, 'arch', options['arch'])
   addCommandLineOption(args, 'gpg-sign', options['gpg-sign'])
   addCommandLineOption(args, 'gpg-homedir', options['gpg-homedir'])
@@ -165,7 +176,7 @@ function flatpakBuildBundle (options, manifest) {
   args.push(manifest['branch'])
   return mkdirs(path.dirname(options['bundle-path']))
     .then(function () {
-      return execAndLog(options, args)
+      return spawnWithLogging(options, 'flatpak', args)
     })
 }
 

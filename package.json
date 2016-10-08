@@ -24,7 +24,6 @@
     "es6-promisify": "^5.0.0",
     "fs-extra": "^0.30.0",
     "lodash": "^4.16.2",
-    "shell-quote": "^1.6.1",
     "tmp": "0.0.29"
   },
   "devDependencies": {
