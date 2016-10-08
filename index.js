@@ -4,7 +4,6 @@ const _ = require('lodash')
 const childProcess = require('child_process')
 const fs = require('fs-extra')
 const path = require('path')
-const util = require('util')
 
 const pkg = require('./package.json')
 const logger = require('debug')(pkg.name)
@@ -53,11 +52,11 @@ function addCommandLineOption (args, name, value) {
   if (!value) return
 
   if (value === true) {
-    args.push(util.format('--%s', name))
+    args.push(`--${name}`)
     return
   }
 
-  args.push(util.format('--%s=%s', name, value))
+  args.push(`--${name}=${value}`)
 }
 
 function getOptionsWithDefaults (options) {
@@ -114,7 +113,7 @@ function copyFiles (options, manifest) {
     let dir = dest
     if (!_.endsWith(dir, path.sep)) dir = path.dirname(dir)
 
-    logger('Copying ' + source + ' to ' + dest)
+    logger(`Copying ${source} to ${dest}`)
     return mkdirs(dir)
       .then(function () {
         return copy(source, dest)
@@ -129,7 +128,7 @@ function createSymlinks (options, manifest) {
     let dest = path.join(options['build-dir'], 'files', targetDest[1])
     let dir = path.dirname(dest)
 
-    logger('Symlinking ' + target + ' at ' + dest)
+    logger(`Symlinking ${target} at ${dest}`)
     return mkdirs(dir)
       .then(function () {
         symlink(target, dest)
@@ -189,8 +188,8 @@ exports.bundle = function (manifest, options, callback) {
       options = getOptionsWithDefaults(options)
       manifest = getManifestWithDefaults(manifest)
 
-      logger('Using manifest ->\n' + JSON.stringify(manifest, null, '  '))
-      logger('Using options ->\n' + JSON.stringify(options, null, '  '))
+      logger(`Using manifest...\n${JSON.stringify(manifest, null, '  ')}`)
+      logger(`Using options...\n${JSON.stringify(options, null, '  ')}`)
     })
     .then(() => writeJsonFile(options, manifest))
     .then(() => flatpakBuilder(options, false))
