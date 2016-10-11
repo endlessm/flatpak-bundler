@@ -11,7 +11,7 @@
     "flatpak"
   ],
   "author": "Matt Watson <mattdangerw@gmail.com>",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/mattdangerw/flatpak-bundler/issues"
   },
