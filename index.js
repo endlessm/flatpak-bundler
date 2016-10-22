@@ -65,7 +65,8 @@ function getOptionsWithDefaults (options) {
     'repo-dir': path.join(options['working-dir'], 'repo'),
     'manifest-path': path.join(options['working-dir'], 'manifest.json'),
     'extra-flatpak-builder-args': [],
-    'extra-flatpak-build-bundle-args': []
+    'extra-flatpak-build-bundle-args': [],
+    'clean-tmpdirs': true
   }
   options = _.defaults({}, options, defaults)
   options['working-dir'] = path.resolve(options['working-dir'])
@@ -93,7 +94,7 @@ function getManifestWithDefaults (manifest) {
 
 function ensureWorkingDir (options) {
   if (!options['working-dir']) {
-    return tmpdir({ dir: '/var/tmp', unsafeCleanup: true })
+    return tmpdir({ dir: '/var/tmp', unsafeCleanup: options['clean-tmpdirs'] })
       .then(function (dir) {
         options['working-dir'] = dir
       })
