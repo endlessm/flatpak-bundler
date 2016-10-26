@@ -187,6 +187,7 @@ function flatpakBuildBundle (options, manifest) {
 exports.bundle = function (manifest, options, callback) {
   manifest = kebabify(manifest)
   options = kebabify(options)
+  if (manifest['app-id']) manifest['id'] = manifest['app-id']
 
   return ensureWorkingDir(options)
     .then(() => {
