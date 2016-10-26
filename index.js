@@ -130,11 +130,6 @@ function createSymlinks (options, manifest) {
 function flatpakBuilder (options, finish) {
   let args = []
   addCommandLineOption(args, 'arch', options['arch'])
-  addCommandLineOption(args, 'gpg-sign', options['gpg-sign'])
-  addCommandLineOption(args, 'gpg-homedir', options['gpg-homedir'])
-  addCommandLineOption(args, 'subject', options['subject'])
-  addCommandLineOption(args, 'body', options['body'])
-  addCommandLineOption(args, 'repo', options['repo-dir'])
   addCommandLineOption(args, 'force-clean', true)
   addCommandLineOption(args, 'allow-missing-runtimes', true)
   if (!finish) {
@@ -147,6 +142,25 @@ function flatpakBuilder (options, finish) {
   args.push(options['build-dir'])
   args.push(options['manifest-path'])
   return spawnWithLogging(options, 'flatpak-builder', args)
+}
+
+function flatpakBuildExport (options, manifest) {
+  let args = ['build-export']
+  addCommandLineOption(args, 'arch', options['arch'])
+  addCommandLineOption(args, 'gpg-sign', options['gpg-sign'])
+  addCommandLineOption(args, 'gpg-homedir', options['gpg-homedir'])
+  addCommandLineOption(args, 'subject', options['subject'])
+  addCommandLineOption(args, 'body', options['body'])
+  if (options['build-runtime']) addCommandLineOption(args, 'runtime', true)
+  args.concat(options['extra-flatpak-build-export-args'])
+
+  args.push(options['repo-dir'])
+  args.push(options['build-dir'])
+  if (manifest['branch']) args.push(manifest['branch'])
+  return mkdirs(path.dirname(options['bundle-path']))
+    .then(function () {
+      return spawnWithLogging(options, 'flatpak', args)
+    })
 }
 
 function flatpakBuildBundle (options, manifest) {
@@ -163,7 +177,7 @@ function flatpakBuildBundle (options, manifest) {
   args.push(options['repo-dir'])
   args.push(options['bundle-path'])
   args.push(manifest['id'])
-  args.push(manifest['branch'])
+  if (manifest['branch']) args.push(manifest['branch'])
   return mkdirs(path.dirname(options['bundle-path']))
     .then(function () {
       return spawnWithLogging(options, 'flatpak', args)
@@ -186,6 +200,7 @@ exports.bundle = function (manifest, options, callback) {
     .then(() => copyFiles(options, manifest))
     .then(() => createSymlinks(options, manifest))
     .then(() => flatpakBuilder(options, true))
+    .then(() => flatpakBuildExport(options, manifest))
     .then(() => flatpakBuildBundle(options, manifest))
     .then(function () {
       callback(null, options)
