@@ -77,21 +77,6 @@ function getOptionsWithDefaults (options) {
   return options
 }
 
-function getManifestWithDefaults (manifest) {
-  let defaults = {
-    'branch': 'master',
-    'sdk': 'org.freedesktop.Sdk',
-    'runtime': 'org.freedesktop.Platform',
-    'modules': [],
-    'files': [],
-    'symlinks': []
-  }
-  if (typeof manifest['runtime'] === 'undefined') {
-    defaults['runtime-version'] = '1.4'
-  }
-  return _.defaults({}, manifest, defaults)
-}
-
 function ensureWorkingDir (options) {
   if (!options['working-dir']) {
     return tmpdir({ dir: '/var/tmp', unsafeCleanup: options['clean-tmpdirs'] })
@@ -108,6 +93,8 @@ function writeJsonFile (options, manifest) {
 }
 
 function copyFiles (options, manifest) {
+  if (!manifest['files']) return
+
   let copies = manifest['files'].map(function (sourceDest) {
     let source = path.resolve(sourceDest[0])
     let dest = path.join(options['build-dir'], 'files', sourceDest[1])
@@ -124,6 +111,8 @@ function copyFiles (options, manifest) {
 }
 
 function createSymlinks (options, manifest) {
+  if (!manifest['symlinks']) return
+
   let links = manifest['symlinks'].map(function (targetDest) {
     let target = path.join('/app', targetDest[0])
     let dest = path.join(options['build-dir'], 'files', targetDest[1])
@@ -188,7 +177,6 @@ exports.bundle = function (manifest, options, callback) {
   return ensureWorkingDir(options)
     .then(() => {
       options = getOptionsWithDefaults(options)
-      manifest = getManifestWithDefaults(manifest)
 
       logger(`Using manifest...\n${JSON.stringify(manifest, null, '  ')}`)
       logger(`Using options...\n${JSON.stringify(options, null, '  ')}`)
@@ -200,7 +188,7 @@ exports.bundle = function (manifest, options, callback) {
     .then(() => flatpakBuilder(options, true))
     .then(() => flatpakBuildBundle(options, manifest))
     .then(function () {
-      callback(null, options, manifest)
+      callback(null, options)
     }, function (error) {
       callback(error)
     })
