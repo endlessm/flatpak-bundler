@@ -26,7 +26,7 @@ function kebabify (object) {
   })
 }
 
-function spawnWithLogging (options, command, args) {
+function spawnWithLogging (options, command, args, allowFail) {
   return new Promise(function (resolve, reject) {
     logger(`$ ${command} ${args.join(' ')}`)
     let child = childProcess.spawn(command, args, { cwd: options['working-dir'] })
@@ -40,10 +40,10 @@ function spawnWithLogging (options, command, args) {
       reject(error)
     })
     child.on('close', (code) => {
-      if (code !== 0) {
+      if (!allowFail && code !== 0) {
         reject(new Error(`${command} failed with status code ${code}`))
       }
-      resolve()
+      resolve(code === 0)
     })
   })
 }
@@ -55,7 +55,69 @@ function addCommandLineOption (args, name, value) {
   if (value !== true) args.push(value)
 }
 
-function getOptionsWithDefaults (options) {
+function ensrueRef (options, flatpakref, id, version) {
+  function checkInstalled (checkUser) {
+    let args = ['info']
+    addCommandLineOption(args, 'show-commit', true)
+    if (checkUser) {
+      addCommandLineOption(args, 'user', true)
+    } else {
+      addCommandLineOption(args, 'system', true)
+    }
+    args.push(id)
+    if (version) args.push(version)
+    return spawnWithLogging(options, 'flatpak', args, true)
+  }
+
+  logger(`Checking for install of ${id}`)
+  return Promise.all([checkInstalled(true), checkInstalled(false)])
+    .then(function (checkResults) {
+      let userInstall = checkResults[0]
+      let systemInstall = checkResults[1]
+      if (!userInstall && !systemInstall) {
+        logger(`No install of ${id} found, trying to install from ${flatpakref}`)
+        if (!flatpakref) throw new Error(`Cannot install ${id} without flatpakref`)
+        let args = ['install']
+        addCommandLineOption(args, 'user', true)
+        addCommandLineOption(args, 'from', flatpakref)
+        return spawnWithLogging(options, 'flatpak', args)
+      }
+
+      logger(`Found install of ${id}, trying to update`)
+      let args = ['update']
+      if (userInstall) addCommandLineOption(args, 'user', true)
+      addCommandLineOption(args, 'arch', options['arch'])
+      args.push(id)
+      if (version) args.push(version)
+      return spawnWithLogging(options, 'flatpak', args)
+    })
+}
+
+function ensureRuntime (options, manifest) {
+  if (!options['auto-install-runtime']) return
+
+  logger('Ensuring runtime is up to date')
+  return ensrueRef(options, manifest['runtime-flatpakref'],
+    manifest['runtime'], manifest['runtime-version'])
+}
+
+function ensureSdk (options, manifest) {
+  if (!options['auto-install-sdk']) return
+
+  logger('Ensuring sdk is up to date')
+  return ensrueRef(options, manifest['sdk-flatpakref'],
+    manifest['sdk'], manifest['sdk-version'])
+}
+
+function ensureBase (options, manifest) {
+  if (!options['auto-install-base']) return
+
+  logger('Ensuring base app is up to date')
+  return ensrueRef(options, manifest['base-flatpakref'],
+    manifest['base'], manifest['base-version'])
+}
+
+function getOptionsWithDefaults (options, manifest) {
   let defaults = {
     'build-dir': path.join(options['working-dir'], 'build'),
     'repo-dir': path.join(options['working-dir'], 'repo'),
@@ -70,6 +132,9 @@ function getOptionsWithDefaults (options) {
   options['repo-dir'] = path.resolve(options['repo-dir'])
   options['manifest-path'] = path.resolve(options['manifest-path'])
   options['bundle-path'] = path.resolve(options['bundle-path'])
+  options['auto-install-runtime'] = typeof manifest['runtime-flatpakref'] !== 'undefined'
+  options['auto-install-sdk'] = typeof manifest['sdk-flatpakref'] !== 'undefined'
+  options['auto-install-base'] = typeof manifest['base-flatpakref'] !== 'undefined'
   return options
 }
 
@@ -201,11 +266,14 @@ exports.bundle = function (manifest, options, callback) {
 
   return ensureWorkingDir(options)
     .then(() => {
-      options = getOptionsWithDefaults(options)
+      options = getOptionsWithDefaults(options, manifest)
 
       logger(`Using manifest...\n${JSON.stringify(manifest, null, '  ')}`)
       logger(`Using options...\n${JSON.stringify(options, null, '  ')}`)
     })
+    .then(() => ensureRuntime(options, manifest))
+    .then(() => ensureSdk(options, manifest))
+    .then(() => ensureBase(options, manifest))
     .then(() => writeJsonFile(options, manifest))
     .then(() => flatpakBuilder(options, false))
     .then(() => copyFiles(options, manifest))
