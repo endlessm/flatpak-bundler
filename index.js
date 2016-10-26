@@ -127,6 +127,23 @@ function createSymlinks (options, manifest) {
   return Promise.all(links)
 }
 
+function copyExports (options, manifest) {
+  if (!manifest['extra-exports']) return
+
+  let copies = manifest['extra-exports'].map(function (source) {
+    let dest = path.join(options['build-dir'], 'export', source)
+    let dir = path.dirname(dest)
+    source = path.join(options['build-dir'], 'files', source)
+
+    logger(`Exporting ${source} to ${dest}`)
+    return mkdirs(dir)
+      .then(function () {
+        return copy(source, dest)
+      })
+  })
+  return Promise.all(copies)
+}
+
 function flatpakBuilder (options, finish) {
   let args = []
   addCommandLineOption(args, 'arch', options['arch'])
@@ -157,10 +174,7 @@ function flatpakBuildExport (options, manifest) {
   args.push(options['repo-dir'])
   args.push(options['build-dir'])
   if (manifest['branch']) args.push(manifest['branch'])
-  return mkdirs(path.dirname(options['bundle-path']))
-    .then(function () {
-      return spawnWithLogging(options, 'flatpak', args)
-    })
+  return spawnWithLogging(options, 'flatpak', args)
 }
 
 function flatpakBuildBundle (options, manifest) {
@@ -201,6 +215,7 @@ exports.bundle = function (manifest, options, callback) {
     .then(() => copyFiles(options, manifest))
     .then(() => createSymlinks(options, manifest))
     .then(() => flatpakBuilder(options, true))
+    .then(() => copyExports(options, manifest))
     .then(() => flatpakBuildExport(options, manifest))
     .then(() => flatpakBuildBundle(options, manifest))
     .then(function () {
