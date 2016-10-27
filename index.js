@@ -51,12 +51,8 @@ function spawnWithLogging (options, command, args) {
 function addCommandLineOption (args, name, value) {
   if (!value) return
 
-  if (value === true) {
-    args.push(`--${name}`)
-    return
-  }
-
-  args.push(`--${name}=${value}`)
+  args.push(`--${name}`)
+  if (value !== true) args.push(value)
 }
 
 function getOptionsWithDefaults (options) {
