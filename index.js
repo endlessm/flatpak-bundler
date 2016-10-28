@@ -244,7 +244,7 @@ function flatpakBuildBundle (options, manifest) {
 
   let args = ['build-bundle']
   addCommandLineOption(args, 'arch', options['arch'])
-  addCommandLineOption(args, 'gpg-sign', options['gpg-sign'])
+  addCommandLineOption(args, 'gpg-keys', options['gpg-keys'])
   addCommandLineOption(args, 'gpg-homedir', options['gpg-homedir'])
   addCommandLineOption(args, 'repo-url', options['bundle-repo-url'])
   if (options['build-runtime']) addCommandLineOption(args, 'runtime', true)
