@@ -26,6 +26,28 @@ function kebabify (object) {
   })
 }
 
+function getOptionsWithDefaults (options, manifest) {
+  let defaults = {
+    'build-dir': path.join(options['working-dir'], 'build'),
+    'repo-dir': path.join(options['working-dir'], 'repo'),
+    'manifest-path': path.join(options['working-dir'], 'manifest.json'),
+    'extra-flatpak-builder-args': [],
+    'extra-flatpak-build-bundle-args': [],
+    'extra-flatpak-build-export-args': [],
+    'clean-tmpdirs': true,
+    'auto-install-runtime': typeof manifest['runtime-flatpakref'] !== 'undefined',
+    'auto-install-sdk': typeof manifest['sdk-flatpakref'] !== 'undefined',
+    'auto-install-base': typeof manifest['base-flatpakref'] !== 'undefined'
+  }
+  options = _.defaults({}, options, defaults)
+  options['working-dir'] = path.resolve(options['working-dir'])
+  options['build-dir'] = path.resolve(options['build-dir'])
+  options['repo-dir'] = path.resolve(options['repo-dir'])
+  options['manifest-path'] = path.resolve(options['manifest-path'])
+  if (options['bundle-path']) options['bundle-path'] = path.resolve(options['bundle-path'])
+  return options
+}
+
 function spawnWithLogging (options, command, args, allowFail) {
   return new Promise(function (resolve, reject) {
     logger(`$ ${command} ${args.join(' ')}`)
@@ -115,27 +137,6 @@ function ensureBase (options, manifest) {
   logger('Ensuring base app is up to date')
   return ensrueRef(options, manifest['base-flatpakref'],
     manifest['base'], manifest['base-version'])
-}
-
-function getOptionsWithDefaults (options, manifest) {
-  let defaults = {
-    'build-dir': path.join(options['working-dir'], 'build'),
-    'repo-dir': path.join(options['working-dir'], 'repo'),
-    'manifest-path': path.join(options['working-dir'], 'manifest.json'),
-    'extra-flatpak-builder-args': [],
-    'extra-flatpak-build-bundle-args': [],
-    'clean-tmpdirs': true
-  }
-  options = _.defaults({}, options, defaults)
-  options['working-dir'] = path.resolve(options['working-dir'])
-  options['build-dir'] = path.resolve(options['build-dir'])
-  options['repo-dir'] = path.resolve(options['repo-dir'])
-  options['manifest-path'] = path.resolve(options['manifest-path'])
-  options['bundle-path'] = path.resolve(options['bundle-path'])
-  options['auto-install-runtime'] = typeof manifest['runtime-flatpakref'] !== 'undefined'
-  options['auto-install-sdk'] = typeof manifest['sdk-flatpakref'] !== 'undefined'
-  options['auto-install-base'] = typeof manifest['base-flatpakref'] !== 'undefined'
-  return options
 }
 
 function ensureWorkingDir (options) {
