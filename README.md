@@ -92,12 +92,8 @@ supported.
    install the base app.
 
 ### Build Options
- - **autoInstallRuntime**: Install/update the runtime while building. Defaults
-   to true if runtimeFlatpakref is set in the manifest.
- - **autoInstallSdk**: Install/update the sdk while building. Defaults
-   to true if sdkFlatpakref is set in the manifest.
- - **autoInstallBase**: Install/update the base app while building. Defaults
-   to true if baseFlatpakref is set in the manifest.
+ - **bundlePath**: Output location for a single file version of the flatpak. If
+   non supplied, the single file flatpak will not be created.
  - **arch**: The architecture for the flatpak bundle. x86_64, i386 or arm.
  - **workingDir**: The working directory to call `flatpak-builder` from.
    Defaults to a new tmp directory.
@@ -107,15 +103,19 @@ supported.
    existing repo. Defaults to `${workingDir}/repo`
  - **cleanTmpdirs**: Cleanup any tmp directories created during the build on
    process exit. Defaults to true. Set false for easier debugging.
- - **bundlePath**: Output location for a single file version of the flatpak. If
-   non supplied, the single file flatpak will not be created.
- - **bundleRepoUrl**: Repo url for the single file bundle. Installing the bundle
-   will automatically configure a remote for this URL.
+ - **autoInstallRuntime**: Install/update the runtime while building. Defaults
+   to true if runtimeFlatpakref is set in the manifest.
+ - **autoInstallSdk**: Install/update the sdk while building. Defaults
+   to true if sdkFlatpakref is set in the manifest.
+ - **autoInstallBase**: Install/update the base app while building. Defaults
+   to true if baseFlatpakref is set in the manifest.
+ - **gpgSign**: The gpg key to use to sign the flatpak repo and bundle file.
+ - **gpgHomedir**: The gpg homedir to use when signing.
  - **subject**: The single line subject to use for the flatpak repo commit
    message.
  - **body**: The description to use for the flatpak repo commit message.
- - **gpgSign**: The gpg key to use to sign the flatpak repo and bundle file.
- - **gpgHomedir**: The gpg homedir to use when signing.
+ - **bundleRepoUrl**: Repo url for the single file bundle. Installing the bundle
+   will automatically configure a remote for this URL.
  - **extraFlatpakBuilderArgs**: List of extra arguments to pass to the
    [flatpak-builder](http://flatpak.org/flatpak/flatpak-docs.html#flatpak-builder) command.
  - **extraFlatpakBuildExportArgs**: List of extra arguments to pass to the
