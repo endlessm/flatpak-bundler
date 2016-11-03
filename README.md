@@ -19,7 +19,7 @@ Hello, world!
 
 ## Overview
 This modules allows building flatpaks programatically from node. It requires
-flatpak to be installed on your system.
+flatpak >= 0.6.13 to be installed on your system.
 
 Under the hood, this is just a wrapper for the `flatpak-builder` tool with some
 extra sugar added. Complete documentation of the `flatpak-builder` can be found
