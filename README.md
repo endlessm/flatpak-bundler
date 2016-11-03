@@ -21,9 +21,8 @@ Hello, world!
 This modules allows building flatpaks programatically from node. It requires
 flatpak >= 0.6.13 to be installed on your system.
 
-Under the hood, this is just a wrapper for the `flatpak-builder` tool with some
-extra sugar added. Complete documentation of the `flatpak-builder` can be found
-by running `man flatpak-builder`.
+Under the hood, this is just a wrapper for the [flatpak-builder](http://flatpak.org/flatpak/flatpak-docs.html#flatpak-builder)
+tool with some extra sugar added.
 
 With `flatpak-builder` you specify a runtime, sandbox permissions and software
 modules to build into you application, and build a flatpak from start to finish.
@@ -58,7 +57,7 @@ applied. Useful to read out the workingDir, for example.
 ### Manifest
 This matches the format for flatpak-builder app manifests, with a few extra
 options added and camelCase variants supported. For complete documentation
-of the manifest format read `man flatpak-builder`.
+of the manifest format read the [flatpak-builder docs](http://flatpak.org/flatpak/flatpak-docs.html#flatpak-builder).
 
  - **id**: Required. The application id.
  - **runtime**: Required. The runtime for your flatpak application.
@@ -118,11 +117,11 @@ supported.
  - **gpgSign**: The gpg key to use to sign the flatpak repo and bundle file.
  - **gpgHomedir**: The gpg homedir to use when signing.
  - **extraFlatpakBuilderArgs**: List of extra arguments to pass to the
-   `flatpak-builder` command.
+   [flatpak-builder](http://flatpak.org/flatpak/flatpak-docs.html#flatpak-builder) command.
  - **extraFlatpakBuildExportArgs**: List of extra arguments to pass to the
-   `flatpak build-export` command.
+   [flatpak build-export](http://flatpak.org/flatpak/flatpak-docs.html#flatpak-build-export) command.
  - **extraFlatpakBuildBundleArgs**: List of extra arguments to pass to the
-   `flatpak build-bundle` command.
+   [flatpak build-bundle](http://flatpak.org/flatpak/flatpak-docs.html#flatpak-build-bundle) command.
 
 ### Logging
 To turn on debugging output set the DEBUG environment variable
