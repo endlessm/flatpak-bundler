@@ -26,6 +26,13 @@ function kebabify (object) {
   })
 }
 
+function flatpakifyArch (arch) {
+  if (arch === 'ia32') return 'i386'
+  if (arch === 'x64') return 'x86_64'
+  if (arch === 'amd64') return 'x86_64'
+  return arch
+}
+
 function getOptionsWithDefaults (options, manifest) {
   let defaults = {
     'build-dir': path.join(options['working-dir'], 'build'),
@@ -268,6 +275,7 @@ exports.bundle = function (manifest, options, callback) {
   return ensureWorkingDir(options)
     .then(() => {
       options = getOptionsWithDefaults(options, manifest)
+      options.arch = flatpakifyArch(options.arch)
 
       logger(`Using manifest...\n${JSON.stringify(manifest, null, '  ')}`)
       logger(`Using options...\n${JSON.stringify(options, null, '  ')}`)
