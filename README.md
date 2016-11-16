@@ -1,4 +1,4 @@
-# flatpak-bundler
+# flatpak-bundler [![Version](https://img.shields.io/npm/v/flatpak-bundler.svg)](https://www.npmjs.com/package/flatpak-bundler)
 Build [flatpaks](http://flatpak.org/) from nodejs.
 
 # Quick Start
