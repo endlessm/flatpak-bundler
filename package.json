@@ -5,7 +5,7 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mattdangerw/flatpak-bundler.git"
+    "url": "git+https://github.com/endlessm/flatpak-bundler.git"
   },
   "keywords": [
     "flatpak"
@@ -13,9 +13,9 @@
   "author": "Matt Watson <mattdangerw@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mattdangerw/flatpak-bundler/issues"
+    "url": "https://github.com/endlessm/flatpak-bundler/issues"
   },
-  "homepage": "https://github.com/mattdangerw/flatpak-bundler#readme",
+  "homepage": "https://github.com/endlessm/flatpak-bundler#readme",
   "engines": {
     "node": ">=4.0.0"
   },

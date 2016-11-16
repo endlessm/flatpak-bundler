@@ -146,7 +146,7 @@ flatpakBundler.bundle({
   id: 'org.world.Hello',
   runtime: 'org.freedesktop.Platform',
   runtimeVersion: '1.4',
-  runtimeFlatpakref: 'https://raw.githubusercontent.com/mattdangerw/flatpak-bundler/master/refs/freedesktop-runtime-1.4.flatpakref',
+  runtimeFlatpakref: 'https://raw.githubusercontent.com/endlessm/flatpak-bundler/master/refs/freedesktop-runtime-1.4.flatpakref',
   sdk: 'org.freedesktop.Sdk',
   files: [
     ['hello', '/bin/hello']
@@ -173,7 +173,7 @@ flatpakBundler.bundle({ // Manifest
   baseFlatpakref: FIXME, // So we can auto install the runtime
   runtime: 'org.freedesktop.Platform', // Use the freedesktop runtime
   runtimeVersion: '1.4',
-  runtimeFlatpakref: 'https://raw.githubusercontent.com/mattdangerw/flatpak-bundler/master/refs/freedesktop-runtime-1.4.flatpakref',
+  runtimeFlatpakref: 'https://raw.githubusercontent.com/endlessm/flatpak-bundler/master/refs/freedesktop-runtime-1.4.flatpakref',
   sdk: 'org.freedesktop.Sdk',
   files: [
     [ 'static/linux', '/share/' ], // Desktop file and icons
