@@ -214,11 +214,13 @@ function copyExports (options, manifest) {
   return Promise.all(copies)
 }
 
-function flatpakBuilder (options, finish) {
+function flatpakBuilder (options, manifest, finish) {
   let args = []
   addCommandLineOption(args, 'arch', options['arch'])
   addCommandLineOption(args, 'force-clean', true)
-  addCommandLineOption(args, 'allow-missing-runtimes', true)
+  // If we are not compile anything, allow building without the platform and sdk
+  // installed. Allows automated builds on a minimal environment, for example.
+  if (!manifest.modules) addCommandLineOption(args, 'allow-missing-runtimes', true)
   if (!finish) {
     addCommandLineOption(args, 'build-only', true)
   } else {
@@ -285,10 +287,10 @@ exports.bundle = function (manifest, options, callback) {
     .then(() => ensureSdk(options, manifest))
     .then(() => ensureBase(options, manifest))
     .then(() => writeJsonFile(options, manifest))
-    .then(() => flatpakBuilder(options, false))
+    .then(() => flatpakBuilder(options, manifest, false))
     .then(() => copyFiles(options, manifest))
     .then(() => createSymlinks(options, manifest))
-    .then(() => flatpakBuilder(options, true))
+    .then(() => flatpakBuilder(options, manifest, true))
     .then(() => copyExports(options, manifest))
     .then(() => flatpakBuildExport(options, manifest))
     .then(() => flatpakBuildBundle(options, manifest))
