@@ -93,7 +93,7 @@ function ensrueRef (options, flatpakref, id, version) {
     } else {
       addCommandLineOption(args, 'system', true)
     }
-    args.push(id)
+    args.push([id, options.arch, version].join('/'))
     if (version) args.push(version)
     return spawnWithLogging(options, 'flatpak', args, true)
   }
@@ -108,6 +108,7 @@ function ensrueRef (options, flatpakref, id, version) {
         if (!flatpakref) throw new Error(`Cannot install ${id} without flatpakref`)
         let args = ['install']
         addCommandLineOption(args, 'user', true)
+        addCommandLineOption(args, 'arch', options['arch'])
         addCommandLineOption(args, 'from', flatpakref)
         return spawnWithLogging(options, 'flatpak', args)
       }
