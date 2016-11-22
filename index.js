@@ -30,6 +30,7 @@ function flatpakifyArch (arch) {
   if (arch === 'ia32') return 'i386'
   if (arch === 'x64') return 'x86_64'
   if (arch === 'amd64') return 'x86_64'
+  if (arch === 'armv7l') return 'arm'
   return arch
 }
 
