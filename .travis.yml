@@ -14,4 +14,6 @@ install:
   - docker run --privileged -v $PWD:/build:rw endlessm/electron-flatpak /bin/bash -c "cd /build && npm install"
 
 script:
-  - docker run --privileged -v $PWD:/build:rw endlessm/electron-flatpak /bin/bash -c "cd /build && DEBUG=flatpak-bundler npm test"
+  - docker run --privileged -v $PWD:/build:rw endlessm/electron-flatpak /bin/bash -c "cd /build &&
+      flatpak install gnome org.freedesktop.Platform/x86_64/1.4 org.freedesktop.Sdk/x86_64/1.4 &&
+      DEBUG=flatpak-bundler npm test"
