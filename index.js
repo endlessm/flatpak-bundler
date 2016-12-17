@@ -95,7 +95,6 @@ function ensrueRef (options, flatpakref, id, version) {
       addCommandLineOption(args, 'system', true)
     }
     args.push([id, options.arch, version].join('/'))
-    if (version) args.push(version)
     return spawnWithLogging(options, 'flatpak', args, true)
   }
 
