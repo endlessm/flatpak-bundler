@@ -108,6 +108,7 @@ function ensrueRef (options, flatpakref, id, version) {
         if (!flatpakref) throw new Error(`Cannot install ${id} without flatpakref`)
         let args = ['install']
         addCommandLineOption(args, 'user', true)
+        addCommandLineOption(args, 'no-deps', true)
         addCommandLineOption(args, 'arch', options['arch'])
         addCommandLineOption(args, 'from', flatpakref)
         return spawnWithLogging(options, 'flatpak', args)
@@ -116,6 +117,7 @@ function ensrueRef (options, flatpakref, id, version) {
       logger(`Found install of ${id}, trying to update`)
       let args = ['update']
       if (userInstall) addCommandLineOption(args, 'user', true)
+      addCommandLineOption(args, 'no-deps', true)
       addCommandLineOption(args, 'arch', options['arch'])
       args.push(id)
       if (version) args.push(version)
