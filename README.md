@@ -170,7 +170,7 @@ const flatpakBundler = require('flatpak-bundler')
 flatpakBundler.bundle({ // Manifest
   id: 'org.world.Hello',
   base: 'io.atom.electron.BaseApp', // Electron base application
-  baseFlatpakref: FIXME, // So we can auto install the runtime
+  baseFlatpakref: 'https://s3-us-west-2.amazonaws.com/electron-flatpak.endlessm.com/electron-base-app-master.flatpakref', // So we can auto install the runtime
   runtime: 'org.freedesktop.Platform', // Use the freedesktop runtime
   runtimeVersion: '1.4',
   runtimeFlatpakref: 'https://raw.githubusercontent.com/endlessm/flatpak-bundler/master/refs/freedesktop-runtime-1.4.flatpakref',
