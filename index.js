@@ -222,7 +222,9 @@ function flatpakBuilder (options, manifest, finish) {
   addCommandLineOption(args, 'force-clean', true)
   // If we are not compile anything, allow building without the platform and sdk
   // installed. Allows automated builds on a minimal environment, for example.
-  if (!manifest.modules) addCommandLineOption(args, 'allow-missing-runtimes', true)
+  if (!manifest.modules || manifest.modules.length === 0) {
+    addCommandLineOption(args, 'allow-missing-runtimes', true)
+  }
   if (!finish) {
     addCommandLineOption(args, 'build-only', true)
   } else {
