@@ -138,7 +138,7 @@ function ensureSdk (options, manifest) {
 
   logger('Ensuring sdk is up to date')
   return ensureRef(options, manifest['sdk-flatpakref'],
-    manifest['sdk'], manifest['sdk-version'])
+    manifest['sdk'], manifest['runtime-version'])
 }
 
 function ensureBase (options, manifest) {
