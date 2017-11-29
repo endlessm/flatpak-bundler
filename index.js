@@ -85,7 +85,7 @@ function addCommandLineOption (args, name, value) {
   if (value !== true) args.push(value)
 }
 
-function ensrueRef (options, flatpakref, id, version) {
+function ensureRef (options, flatpakref, id, version) {
   function checkInstalled (checkUser) {
     let args = ['info']
     addCommandLineOption(args, 'show-commit', true)
@@ -129,7 +129,7 @@ function ensureRuntime (options, manifest) {
   if (!options['auto-install-runtime']) return
 
   logger('Ensuring runtime is up to date')
-  return ensrueRef(options, manifest['runtime-flatpakref'],
+  return ensureRef(options, manifest['runtime-flatpakref'],
     manifest['runtime'], manifest['runtime-version'])
 }
 
@@ -137,7 +137,7 @@ function ensureSdk (options, manifest) {
   if (!options['auto-install-sdk']) return
 
   logger('Ensuring sdk is up to date')
-  return ensrueRef(options, manifest['sdk-flatpakref'],
+  return ensureRef(options, manifest['sdk-flatpakref'],
     manifest['sdk'], manifest['sdk-version'])
 }
 
@@ -145,7 +145,7 @@ function ensureBase (options, manifest) {
   if (!options['auto-install-base']) return
 
   logger('Ensuring base app is up to date')
-  return ensrueRef(options, manifest['base-flatpakref'],
+  return ensureRef(options, manifest['base-flatpakref'],
     manifest['base'], manifest['base-version'])
 }
 
